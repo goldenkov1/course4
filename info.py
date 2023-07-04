@@ -11,10 +11,12 @@ class GetAPI(ABC):
 
 
 class HH(GetAPI):
+    """Класс для работы с АPI сайто hh.ru"""
     def __init__(self, url):
         self.url = url
 
     def get_formatted_vacancies(self, keyword):
+        """Функция не сохраняет вакансии без указания зарплаты и создает экземпляр класса Vacancy"""
         all_hh_vacancies = self.request_api(keyword)
         for vacancy in all_hh_vacancies:
             if vacancy["salary"]:
@@ -24,6 +26,7 @@ class HH(GetAPI):
                             "https://hh.ru/vacancy/" + vacancy["id"])
 
     def request_api(self, keyword):
+        """Получает JSON файл с вакансиями по AIP с сайта hh.ru"""
         all_hh_vacancies = []
         for page in range(10):
             time.sleep(1)
@@ -38,11 +41,13 @@ class HH(GetAPI):
 
 
 class SJ(GetAPI):
+    """Класс для работы с сайтом superjob.ru"""
     def __init__(self, url, header):
         self.url = url
         self.header = header
 
     def get_formatted_vacancies(self, keyword):
+        """Создает экземпляр класса Vacancy"""
         all_sj_vacancies = self.request_api(keyword)
         for vacancy in all_sj_vacancies:
             Vacancy(vacancy["town"]["title"], vacancy["payment_from"], vacancy["payment_to"],
@@ -50,6 +55,7 @@ class SJ(GetAPI):
                     vacancy["profession"], vacancy["id"], vacancy["link"])
 
     def request_api(self, keyword):
+        """Получает JSON файл с вакансиями по API с сайта superjob.ru и удаляет дубликаты"""
         all_sj_vacancies = []
         for page in range(6):
             headers = {"X-Api-App-Id": self.header}
@@ -68,9 +74,17 @@ class SJ(GetAPI):
 
 
 class Vacancy:
+    """Работает с сохраненными вакансиями , сравнивает, сортирует и фильтрует"""
     all_vacancies = []
 
     def __init__(self, area, salary_from, salary_to, requirement, professional_name, id, url):
+        """area --  регион работодателя
+           salary_from -- зарплата от
+           salary_to -- зарплата до
+           requirement -- обязанности и требования
+           professional_name -- название профессии
+           id  --  ID вакансии
+           url  -- ссылка на вакансию"""
         self.area = area
         self.salary_from = salary_from
         self.salary_to = salary_to
@@ -95,6 +109,7 @@ class Vacancy:
 
     @classmethod
     def filtered_area(cls, key_area):
+        """Фильтрует список по региону"""
         filter_area = []
         for vacancy in Vacancy.all_vacancies:
             if vacancy.area == key_area:
@@ -103,24 +118,26 @@ class Vacancy:
 
     @classmethod
     def filtered_salary(cls, key_salary_from):
+        """Фильтрует список по зарплате"""
         filter_salary = []
         for vacancy in Vacancy.all_vacancies:
             if vacancy.salary_from > key_salary_from:
                 filter_salary.append(vacancy)
 
 
-
-
 class JSONSaver:
+    """Класс для работы с JSON файлами"""
     def __init__(self, filename):
         self.filename = filename
 
     def create_file(self, all_vacancies):
+        """Сохраняет информацию в JSON формате"""
         with open(self.filename + ".json", "w") as file:
             for vacancy in all_vacancies:
                 json.dump(vacancy, file, indent=2, ensure_ascii=False, cls=VacancyEncoder)
 
     def select_all(self):
+        """Функция для чтения JSON формата"""
         with open(self.filename, "r") as f:
             data = json.load(f)
             for x in data:
@@ -129,6 +146,7 @@ class JSONSaver:
 
 
 class VacancyEncoder(json.JSONEncoder):
+    """Класс позволяет сериализовать объекты Python в формат JSON."""
     def default(self, obj):
         if isinstance(obj, Vacancy):
             return {"area": obj.area,
